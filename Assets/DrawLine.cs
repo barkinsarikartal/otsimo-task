@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using System;
+using System.IO;
+using UnityEngine.Android;
+
 
 public class DrawLine : MonoBehaviour
 {
@@ -13,16 +17,20 @@ public class DrawLine : MonoBehaviour
     private GameObject currentLine;
     private LineRenderer lineRenderer;
     [SerializeField] private List<Vector2> fingerPositions;
-    private int currentPoint;
     public float currentLayer;
     public Color selectedColor;
     public GameObject fairySprite;
     public int flag = 1;
     public Slider sizeSlider;
     private float lineWidth = .05f;
+    string screenshotFileName = "screenshot.png";
+    public GameObject buttonsPanel;
+    public GameObject ssButton;
+    public TMPro.TMP_Text ssText;
 
     void Start()
     {
+        ssText.alpha = 0f;
         instance = this;
         dropdownMenu.onValueChanged.AddListener(new UnityAction<int>(HandleInputData));
         sizeSlider.onValueChanged.AddListener(OnSliderValueChanged);
@@ -30,6 +38,10 @@ public class DrawLine : MonoBehaviour
 
     void Update()
     {
+        if (IsPointerOverUIObject())
+        {
+            return;
+        }
         if ((flag == 1) && Input.GetMouseButtonDown(0))
         {
             CreateLine();
@@ -77,7 +89,6 @@ public class DrawLine : MonoBehaviour
         fingerPositions.Add(mousePos);
         lineRenderer.positionCount = 1;
         lineRenderer.SetPosition(0, new Vector3(mousePos.x, mousePos.y, currentLayer));
-        currentPoint = 1;
         currentLayer -= 0.001f;
     }
 
@@ -101,7 +112,6 @@ public class DrawLine : MonoBehaviour
         fingerPositions.Add(mousePos);
         lineRenderer.positionCount = 1;
         lineRenderer.SetPosition(0, new Vector3(mousePos.x, mousePos.y, currentLayer));
-        currentPoint = 1;
         currentLayer -= 0.001f;
     }
 
@@ -114,42 +124,39 @@ public class DrawLine : MonoBehaviour
 
     public void BucketFill()
     {
-        GameObject objectToDelete = GameObject.Find("fairy(Clone)");
-        do
-        {
-            if (objectToDelete != null)
-            {
-                Destroy(objectToDelete);
-            }
-            else
-            {
-                Debug.LogWarning("Silmek istediðiniz isme sahip bir nesne bulunamadý.");
-            }
-        } while (objectToDelete);
-        Camera.main.backgroundColor = selectedColor;
+        currentLine = Instantiate(linePrefab, Vector3.zero, Quaternion.identity);
+        lineRenderer = currentLine.GetComponent<LineRenderer>();
+        Material newMaterial = new Material(Shader.Find("Sprites/Default"));
+        newMaterial.color = selectedColor;
+        lineRenderer.material = newMaterial;
+        //to-fix
+        Vector3 startPoint = new Vector3(0f, -5f, currentLayer);
+        Vector3 endPoint = new Vector3(0f, 5f, currentLayer);
+        lineRenderer.positionCount = 2;
+        lineRenderer.SetPosition(0, startPoint);
+        lineRenderer.SetPosition(1, endPoint);
+        lineRenderer.startWidth = Screen.width;
+        lineRenderer.endWidth = Screen.width;
+        currentLayer -= 0.001f;
     }
 
     public void PenButton()
     {
-        Debug.Log("pen button pressed");
         flag = 1;
     }
 
     public void StampButton()
     {
-        Debug.Log("stamp button pressed");
         flag = 2;
     }
 
     public void BucketButton()
     {
-        Debug.Log("bucket button pressed");
         flag = 3;
     }
 
     public void EraserButton()
     {
-        Debug.Log("eraser button pressed");
         flag = 4;
     }
 
@@ -185,6 +192,15 @@ public class DrawLine : MonoBehaviour
         }
     }
 
+    private bool IsPointerOverUIObject()
+    {
+        PointerEventData eventDataCurrentPosition = new PointerEventData(EventSystem.current);
+        eventDataCurrentPosition.position = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+        var results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(eventDataCurrentPosition, results);
+        return results.Count > 0;
+    }
+
     private void OnSliderValueChanged(float value)
     {
         lineWidth = value;
@@ -192,9 +208,21 @@ public class DrawLine : MonoBehaviour
 
     public void DrawFairy()
     {
-        Debug.Log("drawing fairy");
         Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         Vector3 tempFingerPos = new Vector3(mousePos.x, mousePos.y, currentLayer);
         GameObject currentStamp = Instantiate(fairySprite, tempFingerPos, Quaternion.identity);
+    }
+    
+    public void CaptureScreenshot()
+    {
+        /*
+        ssText.alpha = 255f;
+        ssButton.SetActive(false);
+        buttonsPanel.SetActive(false);
+        ScreenCapture.CaptureScreenshot(screenshotFileName);
+        string screenshotPath = Path.Combine(Application.persistentDataPath, screenshotFileName);
+        ssButton.SetActive(true);
+        buttonsPanel.SetActive(true);
+        */
     }
 }
